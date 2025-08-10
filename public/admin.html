@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Sorting Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-slideIn {
+            animation: slideIn 0.4s ease-out;
+        }
+        
+        .animate-fadeIn {
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        .team-card {
+            transition: all 0.3s ease;
+        }
+        
+        .team-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="bg-gradient-to-r from-purple-500 to-indigo-600 w-10 h-10 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">Team Sorting Admin</h1>
+                        <p class="text-gray-600">Manage participants and create teams</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div id="connectionStatus" class="flex items-center space-x-2">
+                        <div class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                        <span class="text-sm text-gray-600">Connected</span>
+                    </div>
+                    <a href="/" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium transition-colors">
+                        ← Participant View
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Participants Panel -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-lg font-semibold text-gray-900">Participants</h2>
+                        <span id="participantCount" class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">0</span>
+                    </div>
+
+                    <div id="participantsList" class="space-y-2 max-h-96 overflow-y-auto">
+                        <div id="noParticipants" class="text-center py-8">
+                            <svg class="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5 0a4 4 0 11-8-4.182"></path>
+                            </svg>
+                            <p class="text-gray-500">No participants yet</p>
+                            <p class="text-gray-400 text-sm">Participants will appear here in real-time</p>
+                        </div>
+                    </div>
+
+                    <!-- Team Generation Controls -->
+                    <div class="mt-6 pt-6 border-t">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="numTeams" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Number of Teams
+                                </label>
+                                <input 
+                                    type="number" 
+                                    id="numTeams" 
+                                    min="1" 
+                                    max="20"
+                                    placeholder="e.g., 4"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                                >
+                            </div>
+                            <button 
+                                id="generateTeamsBtn"
+                                class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-2 px-4 rounded-lg font-medium hover:from-indigo-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <span id="generateBtnText">Sort into Teams</span>
+                                <svg id="generateSpinner" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white hidden inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Clear All Button -->
+                    <div class="mt-4">
+                        <button 
+                            id="clearAllBtn"
+                            class="w-full bg-red-50 text-red-700 py-2 px-4 rounded-lg font-medium hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors duration-200 border border-red-200"
+                        >
+                            Clear All Participants
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Teams Display Panel -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-lg font-semibold text-gray-900">Generated Teams</h2>
+                        <div id="teamsInfo" class="hidden">
+                            <span class="text-sm text-gray-600">
+                                <span id="totalParticipantsCount">0</span> participants in 
+                                <span id="totalTeamsCount">0</span> teams
+                            </span>
+                        </div>
+                    </div>
+
+                    <div id="teamsContainer">
+                        <!-- Default state -->
+                        <div id="noTeams" class="text-center py-16">
+                            <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                            <h3 class="text-xl font-medium text-gray-900 mb-2">No Teams Generated</h3>
+                            <p class="text-gray-500 mb-4">Add participants and click "Sort into Teams" to generate team assignments</p>
+                        </div>
+
+                        <!-- Teams will be dynamically inserted here -->
+                        <div id="teamsGrid" class="hidden grid gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success/Error Notifications -->
+    <div id="notification" class="hidden fixed top-4 right-4 max-w-sm">
+        <div class="bg-white rounded-lg shadow-lg border p-4">
+            <div class="flex items-center">
+                <div id="notificationIcon" class="mr-3">
+                    <!-- Icon will be inserted here -->
+                </div>
+                <div>
+                    <p id="notificationTitle" class="font-medium"></p>
+                    <p id="notificationMessage" class="text-sm text-gray-600"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/admin.js"></script>
+</body>
+</html>
