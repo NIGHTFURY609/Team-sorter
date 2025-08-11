@@ -1,4 +1,4 @@
-# Team Sorting Web Applicatio
+# Team Sorting Web Applicatioivujbboink
 
 A real-time team sorting application built with Node.js, Express, MongoDB, Redis, and Socket.IO. This application allows participants to join a session and administrators to organize them into random teams.
 
